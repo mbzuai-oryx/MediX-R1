@@ -77,39 +77,44 @@ def main():
     # --- Phase 1: Generate responses ---
     if args.generate:
         try:
-            # Load already processed IDs to support resuming
-            completed_ids = set()
-            if os.path.exists(output_file):
-                with open(output_file, 'r') as f:
-                    for line in f:
-                        try:
-                            data = json.loads(line)
-                            completed_ids.add(data.get("id"))
-                        except json.JSONDecodeError:
-                            continue
-                print(f"Found {len(completed_ids)} already processed samples that will be skipped.")
-
-            test_datasets = []
+            # Load all datasets once to determine total expected count
+            all_samples = []
             for dataset_name in datasets_to_load:
                 print(f"Loading dataset: {dataset_name}")
-                test_datasets += load_dataset_with_params(configs_to_load[dataset_name], dataset_name)
+                all_samples += load_dataset_with_params(configs_to_load[dataset_name], dataset_name)
+            total_expected = len(all_samples)
 
-            test_datasets = [sample for sample in test_datasets if sample["id"] not in completed_ids]
-            print(f"Generating responses for {len(test_datasets)} samples using {args.num_workers} workers...")
+            while True:
+                completed_ids = load_completed_ids(output_file)
+                remaining = [s for s in all_samples if s["id"] not in completed_ids]
 
-            if len(test_datasets) != 0:
-                candidate_server = start_vllm_server(model_name, args.tensor_parallel_size)
+                if not remaining:
+                    print(f"All {total_expected} samples generated.")
+                    break
 
-            if args.num_workers <= 1:
-                for sample in tqdm(test_datasets):
-                    process_sample(sample, output_file, model_name)
-            else:
-                from functools import partial
-                worker_func = partial(process_sample, output_file=output_file, model_name=model_name)
-                with concurrent.futures.ProcessPoolExecutor(max_workers=args.num_workers) as executor:
-                    futures = [executor.submit(worker_func, sample) for sample in test_datasets]
-                    for _ in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
-                        pass
+                print(f"Generating responses for {len(remaining)}/{total_expected} samples using {args.num_workers} workers...")
+
+                if not candidate_server:
+                    candidate_server = start_vllm_server(model_name, args.tensor_parallel_size)
+
+                if args.num_workers <= 1:
+                    for sample in tqdm(remaining):
+                        process_sample(sample, output_file, model_name)
+                else:
+                    from functools import partial
+                    worker_func = partial(process_sample, output_file=output_file, model_name=model_name)
+                    with concurrent.futures.ProcessPoolExecutor(max_workers=args.num_workers) as executor:
+                        futures = [executor.submit(worker_func, sample) for sample in remaining]
+                        for _ in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
+                            pass
+
+                # Re-check completeness after this pass
+                completed_count = len(load_completed_ids(output_file))
+                if completed_count >= total_expected:
+                    print(f"All {total_expected} samples generated.")
+                    break
+                else:
+                    print(f"Generated {completed_count}/{total_expected} samples. Retrying missing ones...")
 
         finally:
             if candidate_server:
@@ -120,37 +125,41 @@ def main():
         try:
             eval_model = args.eval_model
             print(f"Evaluating results using model: {eval_model}")
-            responses = load_jsonl(output_file)
+            all_responses = load_jsonl(output_file)
+            total_expected = len(all_responses)
 
-            # Load already evaluated IDs to support resuming
-            evaluated_ids = set()
-            if os.path.exists(eval_file):
-                with open(eval_file, 'r') as f:
-                    for line in f:
-                        try:
-                            data = json.loads(line)
-                            evaluated_ids.add(data.get("id"))
-                        except json.JSONDecodeError:
-                            continue
-                print(f"Found {len(evaluated_ids)} already evaluated samples that will be skipped.")
+            while True:
+                evaluated_ids = load_completed_ids(eval_file)
+                remaining = [s for s in all_responses if s["id"] not in evaluated_ids]
 
-            responses = [sample for sample in responses if sample["id"] not in evaluated_ids]
-            print(f"Evaluating {len(responses)} responses using {args.num_workers} workers...")
+                if not remaining:
+                    print(f"All {total_expected} responses evaluated.")
+                    break
 
-            # GPT models use their own API; only start vLLM for local models
-            if len(responses) != 0 and not eval_model.startswith("gpt"):
-                eval_server = start_vllm_server(eval_model, args.tensor_parallel_size)
+                print(f"Evaluating {len(remaining)}/{total_expected} responses using {args.num_workers} workers...")
 
-            if args.num_workers <= 1:
-                for sample in tqdm(responses):
-                    process_evaluation(sample, eval_file, eval_model)
-            else:
-                from functools import partial
-                eval_worker_func = partial(process_evaluation, eval_file=eval_file, model_name=eval_model)
-                with concurrent.futures.ProcessPoolExecutor(max_workers=args.num_workers) as executor:
-                    futures = [executor.submit(eval_worker_func, sample) for sample in responses]
-                    for _ in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
-                        pass
+                # GPT models use their own API; only start vLLM for local models
+                if not eval_server and not eval_model.startswith("gpt"):
+                    eval_server = start_vllm_server(eval_model, args.tensor_parallel_size)
+
+                if args.num_workers <= 1:
+                    for sample in tqdm(remaining):
+                        process_evaluation(sample, eval_file, eval_model)
+                else:
+                    from functools import partial
+                    eval_worker_func = partial(process_evaluation, eval_file=eval_file, model_name=eval_model)
+                    with concurrent.futures.ProcessPoolExecutor(max_workers=args.num_workers) as executor:
+                        futures = [executor.submit(eval_worker_func, sample) for sample in remaining]
+                        for _ in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
+                            pass
+
+                # Re-check completeness after this pass
+                completed_count = len(load_completed_ids(eval_file))
+                if completed_count >= total_expected:
+                    print(f"All {total_expected} responses evaluated.")
+                    break
+                else:
+                    print(f"Evaluated {completed_count}/{total_expected} responses. Retrying missing ones...")
 
             print("\nEvaluation completed.")
 

@@ -22,6 +22,19 @@ def load_jsonl(file_path):
     return data
 
 
+def load_completed_ids(file_path):
+    """Return the set of sample IDs already present in a JSONL file."""
+    ids = set()
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            for line in f:
+                try:
+                    ids.add(json.loads(line).get("id"))
+                except json.JSONDecodeError:
+                    continue
+    return ids
+
+
 def load_dataset_with_params(params, dataset_name):
     """Load a dataset from HuggingFace and format samples for evaluation."""
     option_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
