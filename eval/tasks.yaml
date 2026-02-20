@@ -1,0 +1,148 @@
+# MEDICAL LLM DATASETS
+llm:
+  mmlu_clinical_knowledge:
+    path: hails/mmlu_no_train
+    name: clinical_knowledge
+    split: test
+    question_column: question
+    answer_id: answer
+    choices_column: choices
+
+  mmlu_college_biology:
+    path: hails/mmlu_no_train
+    name: college_biology
+    split: test
+    question_column: question
+    answer_id: answer
+    choices_column: choices
+
+  mmlu_college_medicine:
+    path: hails/mmlu_no_train
+    name: college_medicine
+    split: test
+    question_column: question
+    answer_id: answer
+    choices_column: choices
+
+  mmlu_medical_genetics:
+    path: hails/mmlu_no_train
+    name: medical_genetics
+    split: test
+    question_column: question
+    answer_id: answer
+    choices_column: choices
+
+  mmlu_professional_medicine:
+    path: hails/mmlu_no_train
+    name: professional_medicine
+    split: test
+    question_column: question
+    answer_id: answer
+    choices_column: choices
+
+  mmlu_anatomy:
+    path: hails/mmlu_no_train
+    name: anatomy
+    split: test
+    question_column: question
+    answer_id: answer
+    choices_column: choices
+
+  medmcqa:
+    path: openlifescienceai/medmcqa
+    split: validation
+    question_column: question
+    answer_id: cop
+    choices_column:
+      - opa
+      - opb
+      - opc
+      - opd
+
+  medqa:
+    path: GBaker/MedQA-USMLE-4-options-hf
+    split: test
+    question_column: sent1
+    answer_id: label
+    choices_column:
+      - ending0
+      - ending1
+      - ending2
+      - ending3
+
+  usmle_sa:
+    path: HuggingSara/usmle_self_assessment
+    split: train
+    question_column: question
+    answer_column: answer
+    choices_column: options
+
+  pubmedqa:
+    path: sahalshajim/medix-eval-sets
+    name: pubmedqa
+    split: test
+    question_column:
+      - CONTEXTS
+      - QUESTION
+    answer:
+      - final_decision
+      - LONG_ANSWER
+    choices:
+      - yes
+      - no
+      - maybe
+
+  mimic_cxr_report_summarization:
+    path: sahalshajim/medix-eval-sets
+    name: mimic_cxr
+    split: test
+    question_column:
+    answer_column: summary
+    choices_column: []
+
+# MEDICAL VLM DATASETS
+vlm:
+  slake_vqa:
+    path: BoKelvin/SLAKE
+    split: test
+    question_column: question
+    answer_column: answer
+    choices_column: []
+
+  rad_vqa:
+    path: flaviagiammarino/vqa-rad
+    split: test
+    question_column: question
+    answer_column: answer
+    choices_column: []
+
+  path_vqa:
+    path: flaviagiammarino/path-vqa
+    split: test
+    question_column: question
+    answer_column: answer
+    choices_column: []
+
+  pmc_vqa:
+    path: sahalshajim/medix-eval-sets
+    name: pmc_vqa
+    split: test
+    question_column: question
+    answer_column: answer
+    choices_column: choices
+
+  pmc_vqa_hard:
+    path: sahalshajim/medix-eval-sets
+    name: pmc_vqa_hard
+    split: test
+    question_column: question
+    answer_column: answer
+    choices_column: []
+
+  mimic_cxr_report_generation:
+    path: sahalshajim/medix-eval-sets
+    name: mimic_cxr
+    split: test
+    question_column:
+    answer_column: report
+    choices_column: []
