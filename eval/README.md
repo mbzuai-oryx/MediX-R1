@@ -70,13 +70,19 @@ python eval.py \
     --tensor_parallel_size 2
 ```
 
-You can also use a GPT model as the judge (uses the OpenAI API directly, no local vLLM server needed):
+**Alternative: Use OpenRouter instead of self-hosting the judge model**
+
+If you don't have enough GPU resources to run the judge model locally, you can use [Qwen3-14B via OpenRouter](https://openrouter.ai/qwen/qwen3-14b). Export your OpenRouter credentials before running:
 
 ```bash
-OPENAI_API_KEY=your_key python eval.py \
+export OPENROUTER_API_KEY=your_openrouter_key
+
+python eval.py \
     --model MBZUAI/MediX-R1-8B \
-    --eval_model gpt-4o \
+    --eval_model qwen/qwen3-14b \
+    --judge_server openrouter \
     --tasks all \
+    --num_workers 128 \
     --evaluate true
 ```
 
@@ -126,11 +132,12 @@ results/
 |---|---|---|
 | `--tasks` | *(required)* | Tasks to run (see task selection above) |
 | `--model` | `MBZUAI/MediX-R1-8B` | Candidate model for generation |
-| `--eval_model` | `Qwen/Qwen3-14B` | Judge model for evaluation (supports GPT models via OpenAI API) |
+| `--eval_model` | `Qwen/Qwen3-14B` | Judge model for evaluation (supports OpenRouter as alternative) |
 | `--config` | `tasks.yaml` | Path to dataset config file |
 | `--output_dir` | `results` | Output directory |
 | `--num_workers` | `1` | Parallel workers for generation/evaluation |
 | `--tensor_parallel_size` | `1` | vLLM tensor parallelism (number of GPUs) |
+| `--judge_server` | `local` | Judge server: `local` (vLLM) or `openrouter` |
 | `--generate` | `false` | Run response generation phase |
 | `--evaluate` | `false` | Run LLM judge evaluation phase |
 | `--score` | `false` | Run score aggregation phase |
@@ -219,4 +226,56 @@ results/
         ...
       Public_Health/
         ...
+```
+
+---
+
+## Submitting Results
+
+After evaluation completes, use `submit.sh` to package your results for submission to the leaderboard.
+
+### Step 1: Generate the submission zip
+
+```bash
+bash submit.sh
+```
+
+This zips the entire `results/<model_name>/` directory. If MMMU-Medical results exist (`results/<model_name>-MMMU-Medical-val/`), they are included automatically.
+
+### Step 2: Submit the zip
+
+Upload the generated zip via the submission form:
+
+> https://forms.gle/H9JaYyyQQFarMq6KA
+
+You can also submit from the leaderboard page:
+
+> https://medix.cvmbzuai.com/leaderboard
+
+Project page: https://medix.cvmbzuai.com
+
+### Submission zip structure
+
+When extracted, the zip contains:
+
+```
+MediX_R1_8B/
+├── MediX_R1_8B.jsonl                  # Generated responses
+├── MediX_R1_8B_eval.jsonl             # Evaluation results
+└── MediX_R1_8B_score.txt              # Final score table
+MediX-R1-8B-MMMU-Medical-val/          # (included if present)
+└── MMMU-Medical-val/
+    ├── result.json
+    ├── Basic_Medical_Science/
+    │   ├── output_sample.json
+    │   ├── parsed_output.json
+    │   └── result.json
+    ├── Clinical_Medicine/
+    │   └── ...
+    ├── Diagnostics_and_Laboratory_Medicine/
+    │   └── ...
+    ├── Pharmacy/
+    │   └── ...
+    └── Public_Health/
+        └── ...
 ```

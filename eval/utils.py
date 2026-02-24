@@ -187,10 +187,17 @@ def generate(sample, model_name):
     return completion.choices[0].message.content
 
 
-def _create_eval_client(model_name):
-    """GPT models use the OpenAI API; all others use the local vLLM server."""
-    if model_name.startswith("gpt"):
-        return OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+def _create_eval_client(judge_server='local'):
+    """Create an OpenAI-compatible client for the eval judge model.
+    Uses OpenRouter when judge_server='openrouter', otherwise uses local vLLM.
+    """
+    if judge_server == 'openrouter':
+        api_key = os.getenv('OPENROUTER_API_KEY')
+        assert api_key, "OPENROUTER_API_KEY is not set. Export it before running:\n  export OPENROUTER_API_KEY=your_openrouter_key"
+        return OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+        )
     else:
         return OpenAI(
             base_url="http://localhost:8005/v1/",
@@ -199,22 +206,15 @@ def _create_eval_client(model_name):
 
 
 def _eval_completion(client, model_name, messages):
-    """GPT models use max_completion_tokens; vLLM models use max_tokens + sampling params."""
-    if model_name.startswith("gpt"):
-        return client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            max_completion_tokens=512
-        )
-    else:
-        return client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            temperature=0.0,
-            max_tokens=512,
-            top_p=1.0,
-            timeout=180
-        )
+    """Request a completion from the eval judge model."""
+    return client.chat.completions.create(
+        model=model_name,
+        messages=messages,
+        temperature=0.0,
+        max_tokens=512,
+        top_p=1.0,
+        timeout=180
+    )
 
 
 def _run_eval_rounds(client, model_name, messages, num_rounds=3):
@@ -245,7 +245,7 @@ def _run_eval_rounds(client, model_name, messages, num_rounds=3):
     return scores, out
 
 
-def evaluate(sample, model_name="Qwen/Qwen3-14B"):
+def evaluate(sample, model_name="Qwen/Qwen3-14B", judge_server='local'):
     """Score a predicted answer against the ground truth using an LLM judge.
     MIMIC tasks use averaged 0-5 scores; all others use majority-vote binary scoring.
     """
@@ -258,10 +258,9 @@ def evaluate(sample, model_name="Qwen/Qwen3-14B"):
     elif '</thinking>' in predicted_answer:
         predicted_answer = predicted_answer.split('</thinking>')[-1].strip()
 
-    client = _create_eval_client(model_name)
+    client = _create_eval_client(judge_server)
 
-    # GPT models don't support /no_think
-    no_think_suffix = "" if model_name.startswith("gpt") else " /no_think"
+    no_think_suffix = " /no_think"
 
     BASE_PROMPT = f"""You are a medical expert.
 
@@ -359,9 +358,9 @@ def process_sample(sample, output_file, model_name):
     return result
 
 
-def process_evaluation(sample, eval_file, model_name):
+def process_evaluation(sample, eval_file, model_name, judge_server='local'):
     """Evaluate a sample's response and append to the eval JSONL file."""
-    evaluation_result = evaluate(sample, model_name)
+    evaluation_result = evaluate(sample, model_name, judge_server)
 
     sample['answer_idx'] = sample.get("answer_idx")
     sample['evaluation'] = evaluation_result

@@ -5,8 +5,8 @@ EVAL_DATASETS=MMMU-Medical-val
 DATASETS_PATH="hf"
 
 MODEL_NAME="Qwen3-VL"
-MODEL_PATH="MBZUAI/MediX-R1-8B"
-OUTPUT_NAME="MediX-R1-8B-MMMU-Medical-val"
+MODEL_PATH="/data0/EVAL_2/RL_MODELS/qwen3_vl_8b_medical_global_step_230"
+OUTPUT_NAME="qwen3_vl_8b_medical_global_step_230-MMMU-Medical-val"
 
 OUTPUT_PATH=results/${OUTPUT_NAME}
 

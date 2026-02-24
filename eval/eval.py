@@ -1,4 +1,5 @@
 import argparse
+import sys
 from tqdm import tqdm
 import yaml
 import os
@@ -19,7 +20,15 @@ def main():
     parser.add_argument('--model', type=str, default='MBZUAI/MediX-R1-8B', help='Model name for generation')
     parser.add_argument('--eval_model', type=str, default='Qwen/Qwen3-14B', help='Model name for evaluation')
     parser.add_argument('--tensor_parallel_size', type=str, default=1, help='Tensor parallel size for vllm server')
+    parser.add_argument('--judge_server', type=str, default='local', choices=['local', 'openrouter'], help='Judge model server: local (vLLM) or openrouter')
     args = parser.parse_args()
+
+    # Validate OpenRouter API key upfront
+    if args.judge_server == 'openrouter' and not os.getenv('OPENROUTER_API_KEY'):
+        print("Error: --judge_server is set to 'openrouter' but OPENROUTER_API_KEY is not set.")
+        print("Set it before running:")
+        print("  export OPENROUTER_API_KEY=your_openrouter_key")
+        sys.exit(1)
 
     # Load dataset configurations from YAML file
     try:
@@ -138,16 +147,16 @@ def main():
 
                 print(f"Evaluating {len(remaining)}/{total_expected} responses using {args.num_workers} workers...")
 
-                # GPT models use their own API; only start vLLM for local models
-                if not eval_server and not eval_model.startswith("gpt"):
+                # Start vLLM server for local judge model (skipped when using OpenRouter)
+                if not eval_server and args.judge_server == 'local':
                     eval_server = start_vllm_server(eval_model, args.tensor_parallel_size)
 
                 if args.num_workers <= 1:
                     for sample in tqdm(remaining):
-                        process_evaluation(sample, eval_file, eval_model)
+                        process_evaluation(sample, eval_file, eval_model, args.judge_server)
                 else:
                     from functools import partial
-                    eval_worker_func = partial(process_evaluation, eval_file=eval_file, model_name=eval_model)
+                    eval_worker_func = partial(process_evaluation, eval_file=eval_file, model_name=eval_model, judge_server=args.judge_server)
                     with concurrent.futures.ProcessPoolExecutor(max_workers=args.num_workers) as executor:
                         futures = [executor.submit(eval_worker_func, sample) for sample in remaining]
                         for _ in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
