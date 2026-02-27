@@ -15,7 +15,7 @@
 #### **Mohamed Bin Zayed University of Artificial Intelligence (MBZUAI), UAE**
 
 [![Website](https://img.shields.io/badge/Project-Website-87CEEB)](https://medix.cvmbzuai.com)
-[![Paper](https://img.shields.io/badge/arXiv-Paper-red.svg)](#)
+[![Paper](https://img.shields.io/badge/arXiv-Paper-red.svg)](https://arxiv.org/pdf/2602.23363)
 [![HuggingFace](https://img.shields.io/badge/HuggingFace-Page-F9D371)](https://huggingface.co/collections/MBZUAI/medix-r1)
 [![Leaderboard](https://img.shields.io/badge/MediX-Leaderboard-green)](https://medix.cvmbzuai.com/leaderboard)
 
@@ -116,11 +116,14 @@ See [`eval/README.md`](eval/README.md) for task selection, CLI reference, and MM
 If you use MediX-R1 in your research, please cite our work as follows:
 
 ```bibtex
-@misc{mullappilly2025medixr1,
-  title     = {MediX-R1: Open-Ended Medical Reinforcement Learning},
-  author    = {Sahal Shaji Mullappilly and Mohammed Irfan Kurpath and Omair Mohamed and Mohamed Zidan and Fahad Khan and Salman Khan and Rao Anwer and Hisham Cholakkal},
-  year      = {2025},
-  howpublished = {\url{https://github.com/mbzuai-oryx/MediX-R1}}
+@misc{mullappilly2026medixr1openendedmedical,
+      title={MediX-R1: Open Ended Medical Reinforcement Learning}, 
+      author={Sahal Shaji Mullappilly and Mohammed Irfan Kurpath and Omair Mohamed and Mohamed Zidan and Fahad Khan and Salman Khan and Rao Anwer and Hisham Cholakkal},
+      year={2026},
+      eprint={2602.23363},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2602.23363}, 
 }
 ```
 
